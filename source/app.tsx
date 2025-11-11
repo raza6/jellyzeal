@@ -13,7 +13,8 @@ type Props = {
 export default function App({}: Props) {
 	const [appHeight, setHeight] = useState(10);
 	const [users, setUsers] = useState<JellyfinUser[]>([]);
-	const [userMedias, setUserMedias] = useState<JellyfinMedia[]>([]);
+	const [userMovies, setUserMovies] = useState<JellyfinMedia[]>([]);
+	const [userSeries, setUserSeries] = useState<JellyfinMedia[]>([]);
 	const [loadingMedias, setLoadingMedias] = useState(false);
 
 	const init = async () => {
@@ -38,7 +39,34 @@ export default function App({}: Props) {
 	const handleHighlightedUser = async (item: any) => {
 		setLoadingMedias(true);
 		const userMedias = await MainService.getUserMedias(item.value.Id);
-		setUserMedias(userMedias.Items);
+		setUserMovies(userMedias.Items.filter(m => m.Type === 'Movie'));
+		const userEpisodes = userMedias.Items.filter(m => m.Type === 'Episode');
+		const userSeries: JellyfinMedia[] = [];
+		console.log(userMedias);
+		for (const ep of userEpisodes) {
+			const series = userSeries.find(s => s.Id === ep.SeriesId);
+			if (series !== undefined) {
+				const existingDate = new Date(series.UserData.LastPlayedDate);
+				const newDate = new Date(ep.UserData.LastPlayedDate);
+				series.UserData.LastPlayedDate = existingDate > newDate ? series.UserData.LastPlayedDate : ep.UserData.LastPlayedDate;
+			} else {
+				userSeries.push({
+					Name: ep.SeriesName ?? '',
+					Id: ep.SeriesId ?? '',
+					IsFolder: false,
+					Type: 'Series',
+					UserData: {
+						PlayCount: ep.UserData.PlayCount,
+						LastPlayedDate: ep.UserData.LastPlayedDate,
+						Played: ep.UserData.Played
+					},
+					SeasonId: undefined,
+					SeriesId: undefined,
+					SeriesName: undefined
+				});
+			}
+		}
+		setUserSeries(userSeries);
 		setLoadingMedias(false);
 	};
 	
@@ -57,9 +85,20 @@ export default function App({}: Props) {
 				<Box flexDirection="column" paddingLeft={1} paddingRight={1}>
 					{ loadingMedias
 						? <Text>Loading...</Text>
-						: userMedias.length === 0
+						: (userMovies.length === 0 && userSeries.length === 0)
 							? <Text>No media played yet</Text>
-							: userMedias.map(m => <Box alignItems="flex-start" key={m.Id}><Text>- {m.Name} ({m.UserData.PlayCount})</Text></Box>)
+							: 
+							<Box >
+								<Box flexDirection='column'>
+									<Text>Movies</Text>
+									{userMovies.map(m => <Box alignItems="flex-start" key={m.Id}><Text>- {m.Name} ({new Date(m.UserData.LastPlayedDate).toLocaleDateString()})</Text></Box>)}
+								</Box>
+								<Box flexDirection='column'>
+									<Text>Series</Text>
+									{userSeries
+										.map(m => <Box alignItems="flex-start" key={m.Id}><Text>- {m.Name} ({new Date(m.UserData.LastPlayedDate).toLocaleDateString()})</Text></Box>)}
+								</Box>
+							</Box>
 					}
 				</Box>
 			</Box>

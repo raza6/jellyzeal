@@ -21,7 +21,7 @@ export default class MainService {
   }
 
   public static async getUserMedias(userId: string): Promise<JellyfinMediaSearchResult> {
-    const users = this.kyy.get(`${this.jellyfinUrl}/Items`, {
+    const medias = this.kyy.get(`${this.jellyfinUrl}/Items`, {
       searchParams: {
         userId: userId,
         recursive: true,
@@ -32,6 +32,6 @@ export default class MainService {
         enableUserData: true,
       }
     }).json<JellyfinMediaSearchResult>();
-    return users;
+    return medias;
   }
 }
